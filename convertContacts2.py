@@ -2,6 +2,7 @@
 """
   VcfToCsvConverter v0.2 - Converts VCF/VCARD files into CSV
   Copyright (C) 2009 Petar Strinic (http://petarstrinic.com)
+  Contributor -- Dave Dartt
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -17,8 +18,12 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
+#modified 11-23-09
+#added glob, os
+import os
 import re
 import sys
+import glob
 import codecs
 import getopt
 
@@ -61,19 +66,48 @@ class VcfToCsvConverter:
     self.output += "\r\n"
     self.data = self.__resetRow()
 
-  def __parseFile(self):
+  #added 11-23-09 
+  #retrieve the list of vcard file names within the directory specified
+  def __getfilenames(self):
     try:
-      inFile = codecs.open(self.inputFile , 'r', 'utf-8', 'ignore')
-      theLine = inFile.readline()
-      for theLine in inFile:
-        self.__parseLine(theLine)
-      inFile.close()
+      if os.path.isdir(self.inputPath):
+        self.inputFileArray = glob.glob(os.path.join(self.inputPath, '*.vc[sf]') )
     except IOError:
-      print "error opening file.\n"
+      print "Directory is empty or does not contain any vcard format files."
       sys.exit(2)
-    outFile = codecs.open(self.outputFile, 'w', 'utf-8', 'ignore')
-    outFile.write(self.output)
-    outFile.close()
+
+  #modified 11-23-09
+  #if -i option used execute on one filename 
+  #if -p option used execute parser per filename found
+  def __parseFile(self):
+    if self.inputPath == None and self.inputFile != None:
+      try:
+        inFile = codecs.open(self.inputFile, 'r', 'utf-8', 'ignore')
+        theLine = inFile.readline()
+        for theLine in inFile:
+          self.__parseLine(theLine)
+        inFile.close()
+      except IOError:
+        print "error opening file during read operation: %s\n" % (self.inputFile)
+        sys.exit(2)
+      outFile = codecs.open(self.outputFile, 'w', 'utf-8', 'ignore')
+      outFile.write(self.output)
+      outFile.close()
+    elif self.inputFile == None:
+      self.__getfilenames()
+      outFile = codecs.open(self.outputFile, 'w', 'utf-8', 'ignore')
+      for NewFileName in self.inputFileArray:
+        try:
+          inFile = codecs.open(NewFileName, 'r', 'utf-8', 'ignore')
+          theLine = inFile.readline()
+          for theLine in inFile:
+            self.__parseLine(theLine)
+          inFile.close()
+        except IOError:
+          print "error opening file during read operation via path: %s\n" % (NewFileName)
+          sys.exit(2)
+      outFile.write(self.output)
+      outFile.close()
 
   def __parseLine(self, theLine):
     theLine = theLine.strip()
@@ -102,57 +136,57 @@ class VcfToCsvConverter:
         self.__trace("item pre0 split: %s " % pre[0].split("."));
 
     """
-    1x N 	Name 	a structured representation of the name of the person, place or thing associated with the vCard object.
-    1x FN 	Formatted Name 	the formatted name string associated with the vCard object
-    LS PHOTO 	Photograph 	an image or photograph of the individual associated with the vCard
-    1x BDAY 	Birthday 	date of birth of the individual associated with the vCard
-    6x ADR 	Delivery Address 	a structured representation of the physical delivery address for the vCard object
-    NS LABEL 	Label Address 	addressing label for physical delivery to the person/object associated with the vCard
-    15x TEL 	Telephone 	the canonical number string for a telephone number for telephony communication with the vCard object
-    6x EMAIL 	Email 	the address for electronic mail communication with the vCard object
-    1x MAILER 	Email Program (Optional) 	Type of email program used
-    1x TZ 	Time Zone 	information related to the standard time zone of the vCard object
-    1x GEO 	Global Positioning 	The property specifies a latitude and longitude
-    1x TITLE 	Title 	specifies the job title, functional position or function of the individual associated with the vCard object within an organization (V. P. Research and Development)
-    1x ROLE 	Role or occupation 	the role, occupation, or business category of the vCard object within an organization (eg. Executive)
-    LS LOGO 	Logo 	an image or graphic of the logo of the organization that is associated with the individual to which the vCard belongs
-    1x AGENT 	Agent 	information about another person who will act on behalf of the vCard object. Typically this would be an area administrator, assistant, or secretary for the individual
-    1x ORG 	Organization Name or Organizational unit 	the name and optionally the unit(s) of the organization associated with the vCard object. This property is based on the X.520 Organization Name attribute and the X.520 Organization Unit attribute
-    1x NOTE 	Note 	specifies supplemental information or a comment that is associated with the vCard
-    1x REV 	Last Revision 	combination of the calendar date and time of day of the last update to the vCard object
-    NS SOUND 	Sound 	By default, if this property is not grouped with other properties it specifies the pronunciation of the Formatted Name property of the vCard object.
-    1x URL 	URL 	An URL is a representation of an Internet location that can be used to obtain real-time information about the vCard object
-    1x UID 	Unique Identifier 	specifies a value that represents a persistent, globally unique identifier associated with the object
-    NA VERSION 	Version 	Version of the vCard Specification
-    NS KEY 	Public Key 	the public encryption key associated with the vCard object
-       X-ABUID 	property 	string 	Apple Address Book UUID for that entry
-       X-ANNIVERSARY 	property 	YYYY-MM-DD 	arbitrary anniversary, in addition to BDAY = birthday
-       X-ASSISTANT 	property 	string 	assistant name (instead of Agent)
-       X-MANAGER 	property 	string 	manager name
-       X-SPOUSE 	property 	string 	spouse name
-    1x X-AIM 	property 	string 	Instant Messaging (IM) contact information; TYPE parameter as for TEL (I.e. WORK/HOME/OTHER)
-    1x X-ICQ 	property 	string 	"
-    1x X-JABBER 	property 	string 	"
-    1x X-MSN 	property 	string 	"
-    1x X-YAHOO 	property 	string 	"
-    1x X-SKYPE-USERNAME 	property 	string 	"
-    1x X-GADUGADU 	property 	string 	"
-    1x X-GROUPWISE 	property 	string 	"
-       X-MS-IMADDRESS 	property 	string 	" (IM address in VCF attachment from Outlook (right click Contact, Send Full Contact, Internet Format.)
-       X-MS-CARDPICTURE 	property 	string 	Works as PHOTO or LOGO. Contains an image of the Card in Outlook.
-       X-PHONETIC-FIRST-NAME, X-PHONETIC-LAST-NAME 	property 	string 	alternative spelling of name, used for Japanese names by Android and iPhone introduced and used by Mozilla, also used by Evolution (software)
-       X-MOZILLA-HTML 	property 	TRUE/FALSE 	mail recipient wants HTML email introduced and used by Evolution (software)
-       X-EVOLUTION-ANNIVERSARY 	property 	YYYY-MM-DD 	arbitrary anniversary, in addition to BDAY = birthday
-       X-EVOLUTION-ASSISTANT 	property 	string 	assistant name (instead of Agent)
-       X-EVOLUTION-BLOG-URL 	property 	string/URL 	blog URL
-       X-EVOLUTION-FILE-AS 	property 	string 	file under different name (in addition to N = name components and FN = full name
-       X-EVOLUTION-MANAGER 	property 	string 	manager name
-       X-EVOLUTION-SPOUSE 	property 	string 	spouse name
-       X-EVOLUTION-VIDEO-URL 	property 	string/URL 	video chat address
-       X-EVOLUTION-CALLBACK 	TEL TYPE parameter value 	- 	callback phone number
-       X-EVOLUTION-RADIO 	TEL TYPE parameter value 	- 	radio contact information
-       X-EVOLUTION-TELEX 	TEL TYPE parameter value 	- 	Telex contact information
-       X-EVOLUTION-TTYTDD 	TEL TYPE parameter value 	- 	TTY TDD contact information
+    1x N    Name    a structured representation of the name of the person, place or thing associated with the vCard object.
+    1x FN   Formatted Name  the formatted name string associated with the vCard object
+    LS PHOTO    Photograph  an image or photograph of the individual associated with the vCard
+    1x BDAY     Birthday    date of birth of the individual associated with the vCard
+    6x ADR  Delivery Address    a structured representation of the physical delivery address for the vCard object
+    NS LABEL    Label Address   addressing label for physical delivery to the person/object associated with the vCard
+    15x TEL     Telephone   the canonical number string for a telephone number for telephony communication with the vCard object
+    6x EMAIL    Email   the address for electronic mail communication with the vCard object
+    1x MAILER   Email Program (Optional)    Type of email program used
+    1x TZ   Time Zone   information related to the standard time zone of the vCard object
+    1x GEO  Global Positioning  The property specifies a latitude and longitude
+    1x TITLE    Title   specifies the job title, functional position or function of the individual associated with the vCard object within an organization (V. P. Research and Development)
+    1x ROLE     Role or occupation  the role, occupation, or business category of the vCard object within an organization (eg. Executive)
+    LS LOGO     Logo    an image or graphic of the logo of the organization that is associated with the individual to which the vCard belongs
+    1x AGENT    Agent   information about another person who will act on behalf of the vCard object. Typically this would be an area administrator, assistant, or secretary for the individual
+    1x ORG  Organization Name or Organizational unit    the name and optionally the unit(s) of the organization associated with the vCard object. This property is based on the X.520 Organization Name attribute and the X.520 Organization Unit attribute
+    1x NOTE     Note    specifies supplemental information or a comment that is associated with the vCard
+    1x REV  Last Revision   combination of the calendar date and time of day of the last update to the vCard object
+    NS SOUND    Sound   By default, if this property is not grouped with other properties it specifies the pronunciation of the Formatted Name property of the vCard object.
+    1x URL  URL     An URL is a representation of an Internet location that can be used to obtain real-time information about the vCard object
+    1x UID  Unique Identifier   specifies a value that represents a persistent, globally unique identifier associated with the object
+    NA VERSION  Version     Version of the vCard Specification
+    NS KEY  Public Key  the public encryption key associated with the vCard object
+       X-ABUID  property    string  Apple Address Book UUID for that entry
+       X-ANNIVERSARY    property    YYYY-MM-DD  arbitrary anniversary, in addition to BDAY = birthday
+       X-ASSISTANT  property    string  assistant name (instead of Agent)
+       X-MANAGER    property    string  manager name
+       X-SPOUSE     property    string  spouse name
+    1x X-AIM    property    string  Instant Messaging (IM) contact information; TYPE parameter as for TEL (I.e. WORK/HOME/OTHER)
+    1x X-ICQ    property    string  "
+    1x X-JABBER     property    string  "
+    1x X-MSN    property    string  "
+    1x X-YAHOO  property    string  "
+    1x X-SKYPE-USERNAME     property    string  "
+    1x X-GADUGADU   property    string  "
+    1x X-GROUPWISE  property    string  "
+       X-MS-IMADDRESS   property    string  " (IM address in VCF attachment from Outlook (right click Contact, Send Full Contact, Internet Format.)
+       X-MS-CARDPICTURE     property    string  Works as PHOTO or LOGO. Contains an image of the Card in Outlook.
+       X-PHONETIC-FIRST-NAME, X-PHONETIC-LAST-NAME  property    string  alternative spelling of name, used for Japanese names by Android and iPhone introduced and used by Mozilla, also used by Evolution (software)
+       X-MOZILLA-HTML   property    TRUE/FALSE  mail recipient wants HTML email introduced and used by Evolution (software)
+       X-EVOLUTION-ANNIVERSARY  property    YYYY-MM-DD  arbitrary anniversary, in addition to BDAY = birthday
+       X-EVOLUTION-ASSISTANT    property    string  assistant name (instead of Agent)
+       X-EVOLUTION-BLOG-URL     property    string/URL  blog URL
+       X-EVOLUTION-FILE-AS  property    string  file under different name (in addition to N = name components and FN = full name
+       X-EVOLUTION-MANAGER  property    string  manager name
+       X-EVOLUTION-SPOUSE   property    string  spouse name
+       X-EVOLUTION-VIDEO-URL    property    string/URL  video chat address
+       X-EVOLUTION-CALLBACK     TEL TYPE parameter value    -   callback phone number
+       X-EVOLUTION-RADIO    TEL TYPE parameter value    -   radio contact information
+       X-EVOLUTION-TELEX    TEL TYPE parameter value    -   Telex contact information
+       X-EVOLUTION-TTYTDD   TEL TYPE parameter value    -   TTY TDD contact information
     """
     if pre[0] == 'VERSION':
       self.__trace("version: %s " % pieces[1])
@@ -330,7 +364,10 @@ class VcfToCsvConverter:
         self.data['WARNING'] += "Invalid format for N tag, using as FN instead. "
         self.__trace("_name: Invalid format for N tag, using as FN instead. %s" % p)
 
-  def __init__(self, inputFileName, outputFileName, delimiter, quote, trace):
+  #modified 11-23-09
+  #added inputFilePath variable and initialize into class
+  #added initialize of inputFileArray variable into class 
+  def __init__(self, inputFileName, inputFilePath, outputFileName, delimiter, quote, trace):
     self.trace = trace
     self.addressCount = { 'HOME' : 1, 'WORK' : 1 }
     self.telephoneCount = { 'HOME PHONE' : 1, 'WORK PHONE' : 1, 'MOBILE PHONE' : 1, 'HOME FAX' : 1, 'WORK FAX' : 1 }
@@ -340,6 +377,8 @@ class VcfToCsvConverter:
     self.delimiter = delimiter
     self.output = ''
     self.inputFile = inputFileName
+    self.inputPath = inputFilePath
+    self.inputFileArray = None
     self.outputFile = outputFileName
     self.maxAddresses = 3
     self.maxTelephones = 3
@@ -374,20 +413,29 @@ class VcfToCsvConverter:
 
     self.__trace(self.output)
 
+#modified 11-23-09 
+#modified to reflect current options available
 def usage():
-  print "options \n-h|--help this menu\n-i input file (VCS) *required\n-o output file (TAB) *required\n-d [comma|tab|semicolon] delimiter (tab is default)\n-q double quote values"
+  print "options \n-h| --help this menu\n-i input file (VCS,VCF) *required if no path specified\n-p path of input files (VCS,VCF) *required if no input file specified\n-o output file (TAB) *required\n-d [comma|tab|semicolon] delimiter (tab is default)\n-q double quote values"
 
+#modified 11-23-09
+#modified to include dave dartt as a contributer
 def version():
-  print "convertContacts.py v0.2.001 2009-10-07 - by Petar Strinic http://petarstrinic.com"
+  print "convertContacts.py v0.2.002 2009-11-23 - by Petar Strinic http://petarstrinic.com\nMultifile input contribution by Dave Dartt"
 
+#modified 11-23-09
+#modified to accept -p option and process option accordingly
+#modified verbose statement to show processing according to options used
+#during calling of script.
 def main():
   try:
-    opts, args = getopt.getopt(sys.argv[1:], "ho:i:d:q", ["help","trace", "version"])
+      opts, args = getopt.getopt(sys.argv[1:], "h:o:i:p:d:q", ["help","trace", "version"])
   except getopt.GetoptError, err:
     print str(err)
     usage()
     sys.exit(2)
   input_file = None
+  input_path = None
   output_file = None
   quote = False
   trace = False
@@ -399,6 +447,8 @@ def main():
       sys.exit(0)
     elif option == "-i":
       input_file = value
+    elif option == "-p":
+      input_path = value
     elif option == "-o":
       output_file = value
     elif option == "-q":
@@ -425,13 +475,22 @@ def main():
     else:
       print "unhandled option %s" % option
       sys.exit(2)
-  if input_file == None or output_file == None:
+  if (input_file == None and input_path == None) or output_file == None:
     print "missing required parameters"
     usage()
     sys.exit(2)
-  print "converting %s > %s (%s delimited)" % (input_file, output_file, delimiter_string)
-  VcfToCsvConverter(input_file, output_file, delimiter, quote, trace)
-  sys.exit(0)
+  if input_file != None and input_path == None:
+    print "converting %s > %s (%s delimited)" % (input_file, output_file, delimiter_string)
+    VcfToCsvConverter(input_file, input_path, output_file, delimiter, quote, trace)
+    sys.exit(0)
+  elif input_file == None and input_path != None:
+    print "converting files within path: %s > %s (%s delimited)" % (input_path, output_file, delimiter_string)
+    VcfToCsvConverter(input_file, input_path, output_file, delimiter, quote, trace)
+    sys.exit(0)
+  else:
+    print "Invalid filename or path"
+    usage()
+    sys.exit(0)
 
 if __name__ == "__main__":
   main()
