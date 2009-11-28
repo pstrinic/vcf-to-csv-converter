@@ -1,7 +1,7 @@
 ﻿#!/usr/bin/python2.5
 # -*- coding: utf-8 -*-
 """
-	VcfToCsvConverter v0.2 - Converts VCF/VCARD files into CSV
+	VcfToCsvConverter v0.3 - Converts VCF/VCARD files into CSV
 	Copyright (C) 2009 Petar Strinic (http://petarstrinic.com)
 	Contributor -- Dave Dartt
 
