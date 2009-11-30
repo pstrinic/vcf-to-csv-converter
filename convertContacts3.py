@@ -1,4 +1,4 @@
-﻿#!/usr/bin/python2.5
+﻿#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 	VcfToCsvConverter v0.3 - Converts VCF/VCARD files into CSV
@@ -429,7 +429,7 @@ class MyOption(Option):
 			Option.take_action(self, action, dest, opt, value, values, parser)
 
 def main():
-	usa = "usage: python ./%prog -i<filename[s]>|-p<pathname> -o<filename> -d<option> -q -v"
+	usa = "usage: python ./%prog -i<filename[s]>|-p<pathname> <other options>"
 	ver = "%prog v0.3.000 2009-11-25 - by Petar Strinic http://petarstrinic.com contributions of code snippets by Dave Dartt"
 	des = "This program was designed to take the information within a vcard and export it's contents to a csv file for easy import into other address book clients."
 	parser = OptionParser(option_class=MyOption, usage=usa, version=ver, description=des)
@@ -440,10 +440,36 @@ def main():
 	parser.add_option("-q", "--quote", action="store_true", dest="quote", default=False, help="Double quote the output strings (default is off)")
 	parser.add_option("-v", "--verbose", action="store_false", dest="verbose", default=True, help="Show processing information (default is on)")
 	parser.add_option("--trace", action="store_true", dest="trace", default=False, help="Displays a ton of debugging information.")
+	parser.add_option("--config", action="store", dest="config", default=None, help="Name a config file be used")
 
 	(options, args) = parser.parse_args()
 	if options.input_file != None and options.input_path != None:
 		parser.error("options -i and -p are mutually exclusive ...use one or the other but not both")
+
+	# If we have a config file, parse it and combine into Options
+
+	if options.config:
+		cfg = os.path.normpath(os.path.expanduser(os.path.expandvars(options.config)))
+		inp = open(cfg, 'r')
+		try:
+			t = inp.readlines()
+		finally:
+			inp.close()
+		lines = []
+		for line in t:
+			ln = line.rstrip()
+			if len(ln) > 0:
+				n = line.find("#")
+				if n == -1 or n > 0:
+					lines.append('--' + ln)
+
+		(options, args) = optionParser.parse_args(lines)
+		
+		# And re-parse argv[] on top of them to replace. BUT NULL options.config FIRST - DON'T WANT IF WAS IN CONFIG FILE!
+
+		options.config = None
+		optionParser.parse_args(sys.argv[1:], options)
+
 	delimiter = options.delimiter
 	delimiter_string = "tab"
 	if options.delimiter == "comma":
