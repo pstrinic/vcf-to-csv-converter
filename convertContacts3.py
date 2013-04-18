@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python
+﻿#!/usr/bin/python2.5
 # -*- coding: utf-8 -*-
 """
 	VcfToCsvConverter v0.3 - Converts VCF/VCARD files into CSV
@@ -32,9 +32,21 @@ class VcfToCsvConverter:
 		if self.quote == True:
 			self.output += '"'
 
+
+	def __CleanData(self,text):
+		if text[-1:] == ';' or text[-1:] == '\\':
+			return self.__CleanData(text[:-1])
+		else:
+			return text
+
 	def __output(self, text):
 		self.__outputQuote();
-		self.output += text
+		text = text.replace('\\:',':').replace('\\;',';').replace('\\,',',').replace('\\=','=')
+		if self.quote == True:
+			text = text.replace('\\n','\n').replace('\\r','\r').replace('\\'+self.delimiter,self.delimiter).strip()
+		else:
+			text = text.strip()
+		self.output += self.__CleanData(text)
 		self.__outputQuote();
 		self.output += self.delimiter
 
@@ -116,16 +128,16 @@ class VcfToCsvConverter:
 		theLine = theLine.strip()
 		if len(theLine) < 1:
 			pass
-		elif re.match('^BEGIN:VCARD', theLine):
+		elif re.match('^BEGIN:VCARD', theLine, re.I):
 			pass
-		elif re.match('^END:VCARD', theLine):
+		elif re.match('^END:VCARD', theLine, re.I):
 			self.__endLine()
 		else:
-			self.__processLine(theLine.split(":"))
+			self.__processLine(re.split("(?<!\\\\):",theLine))
 
 	def __processLine(self, pieces):
 		self.__trace("pieces: %s " % pieces)
-		pre = pieces[0].split(";")
+		pre = re.split("(?<!\\\\);",pieces[0])
 		self.__trace("pieces pre: %s " % pre)
 		self.__trace("item pieces pre0: %s " % pre[0])
 
@@ -191,66 +203,66 @@ class VcfToCsvConverter:
 		X-EVOLUTION-TELEX  TEL TYPE parameter value  -  Telex contact information
 		X-EVOLUTION-TTYTDD  TEL TYPE parameter value  -  TTY TDD contact information
 		"""
-		if pre[0] == 'VERSION':
+		if pre[0].upper() == 'VERSION':
 			self.__trace("version: %s " % pieces[1])
 			if pieces[1] != '3.0':
 				self.data['WARNING'] = "Unexpected VCARD version: %s. " % pieces[1]
 				self.__trace("Unexpected VCARD version: %s. " % pieces[1])
-		elif pre[0] == 'N':
+		elif pre[0].upper() == 'N':
 			self.__processName(pre, pieces[1])
-		elif pre[0] == 'FN':
+		elif pre[0].upper() == 'FN':
 			self.__processSingleValue('FORMATTED NAME', pre, pieces[1])
-		elif pre[0] == 'NICKNAME':
+		elif pre[0].upper() == 'NICKNAME':
 			self.__processSingleValue('NICKNAME', pre, pieces[1])
-		elif pre[0] == 'TITLE':
+		elif pre[0].upper() == 'TITLE':
 			self.__processSingleValue('TITLE', pre, pieces[1])
-		elif pre[0] == 'BDAY':
+		elif pre[0].upper() == 'BDAY':
 			self.__processSingleValue('BIRTHDAY', pre, pieces[1])
-		elif pre[0] == 'ORG':
+		elif pre[0].upper() == 'ORG':
 			self.__processSingleValue('ORGANIZATION', pre, pieces[1])
-		elif pre[0] == 'ROLE':
+		elif pre[0].upper() == 'ROLE':
 			self.__processSingleValue('ROLE', pre, pieces[1])
-		elif pre[0] == 'GEO':
+		elif pre[0].upper() == 'GEO':
 			self.__processSingleValue('GEOCODE', pre, pieces[1])
-		elif pre[0] == 'MAILER':
+		elif pre[0].upper() == 'MAILER':
 			self.__processSingleValue('MAILER', pre, pieces[1])
-		elif pre[0] == 'TZ':
+		elif pre[0].upper() == 'TZ':
 			self.__processTimeZone(pieces[1:])
-		elif pre[0] == 'ADR':
+		elif pre[0].upper() == 'ADR':
 			self.__processAddress(pre, pieces[1])
-		elif pre[0] == 'LOGO':
+		elif pre[0].upper() == 'LOGO':
 			self.__processImageUrl('LOGO URL', pre, pieces[1:])
-		elif pre[0] == 'PHOTO':
+		elif pre[0].upper() == 'PHOTO':
 			self.__processImageUrl('PHOTO', pre, pieces[1:])
-		elif pre[0] == 'TEL':
+		elif pre[0].upper() == 'TEL':
 			self.__processTelephone(pre, pieces[1:])
-		elif pre[0] == 'EMAIL':
+		elif pre[0].upper() == 'EMAIL':
 			self.__processEmail(pre, pieces[1:])
-		elif pre[0] == 'AGENT':
+		elif pre[0].upper() == 'AGENT':
 			self.__processAgent(pre, pieces[1:])
-		elif pre[0] == 'NOTE':
+		elif pre[0].upper() == 'NOTE':
 			self.__processSingleValue('NOTE', pre, pieces[1])
-		elif pre[0] == 'REV':
+		elif pre[0].upper() == 'REV':
 			self.__processSingleValue('REV', pre, pieces[1])
-		elif pre[0] == 'URL':
+		elif pre[0].upper() == 'URL':
 			self.__processSingleValue('URL', pre, ":".join(pieces[1:]))
-		elif pre[0] == 'UID':
+		elif pre[0].upper() == 'UID':
 			self.__processSingleValue('UID', pre, pieces[1])
-		elif pre[0] == 'X-AIM':
+		elif pre[0].upper() == 'X-AIM':
 			self.__processSingleValue('AIM', pre, pieces[1])
-		elif pre[0] == 'X-ICQ':
+		elif pre[0].upper() == 'X-ICQ':
 			self.__processSingleValue('ICQ', pre, pieces[1])
-		elif pre[0] == 'X-JABBER':
+		elif pre[0].upper() == 'X-JABBER':
 			self.__processSingleValue('JABBER', pre, pieces[1])
-		elif pre[0] == 'X-MSN':
+		elif pre[0].upper() == 'X-MSN':
 			self.__processSingleValue('MSN', pre, pieces[1])
-		elif pre[0] == 'X-YAHOO':
+		elif pre[0].upper() == 'X-YAHOO':
 			self.__processSingleValue('YAHOO', pre, pieces[1])
-		elif pre[0] == 'X-SKYPE-USERNAME':
+		elif pre[0].upper() == 'X-SKYPE-USERNAME':
 			self.__processSingleValue('SKYPE', pre, pieces[1])
-		elif pre[0] == 'X-GADUGADU':
+		elif pre[0].upper() == 'X-GADUGADU':
 			self.__processSingleValue('GADUGADU', pre, pieces[1])
-		elif pre[0] == 'X-GROUPWISE':
+		elif pre[0].upper() == 'X-GROUPWISE':
 			self.__processSingleValue('GROUPWISE', pre, pieces[1])
 
 	def __processEmail(self, pre, p):
@@ -308,14 +320,14 @@ class VcfToCsvConverter:
 		self.__trace("__processAddress: %s %s" % (pre, p))
 		self.__trace("_ADDRESS: %s" % (p))
 		try:
-			(a, b, address, city, state, zip, country ) = p.split(";")
+			(a, b, address, city, state, zip, country ) = re.split("(?<!\\\\);",p)
 		except ValueError:
-			(a, b, address, city, state, zip ) = p.split(";")
+			(a, b, address, city, state, zip ) = re.split("(?<!\\\\);",p)
 			country = '';
 
 		addressType = "HOME"
 		try:
-			(a,addressTypes) = pre[1].split("=");
+			(a,addressTypes) = re.split("(?<!\\\\)=",pre[1]);
 			self.__trace("_addressTypes: %s " % addressTypes)
 			if "work" in (addressTypes.lower()).split(","):
 				self.__trace("_work address");
@@ -354,7 +366,7 @@ class VcfToCsvConverter:
 	def __processName(self, pre, p):
 		self.__trace("__processName: %s %s" % (pre, p))
 		try:
-			( ln, fn, mi, pr, po ) = p.split(";")
+			( ln, fn, mi, pr, po ) = re.split("(?<!\\\\);",p)
 			self.__trace("_name: %s %s %s %s %s" % (pr, fn, mi, ln, po))
 			self.data['NAME PREFIX'] = pr
 			self.data['NAME FIRST'] = fn
@@ -429,7 +441,7 @@ class MyOption(Option):
 			Option.take_action(self, action, dest, opt, value, values, parser)
 
 def main():
-	usa = "usage: python ./%prog -i<filename[s]>|-p<pathname> <other options>"
+	usa = "usage: python ./%prog -i<filename[s]>|-p<pathname> -o<filename> -d<option> -q -v"
 	ver = "%prog v0.3.000 2009-11-25 - by Petar Strinic http://petarstrinic.com contributions of code snippets by Dave Dartt"
 	des = "This program was designed to take the information within a vcard and export it's contents to a csv file for easy import into other address book clients."
 	parser = OptionParser(option_class=MyOption, usage=usa, version=ver, description=des)
